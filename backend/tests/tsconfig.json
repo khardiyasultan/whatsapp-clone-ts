@@ -1,0 +1,14 @@
+
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": [
+    "test-socket-client.ts",
+    "test-receiver.ts"
+  ],
+  "exclude": ["node_modules", "../dist"]
+}
