@@ -1,5 +1,5 @@
 import { Router } from "express";
-
+import { ensureDB } from "../middleware/ensure-db.middleware.js";
 import {
   loginUser,
   registerUser,
@@ -23,11 +23,11 @@ authRouter.get("/test", (_req, res) => {
   });
 });
 
-authRouter.post("/register", registerUser);
-authRouter.post("/login", loginUser);
-authRouter.get("/me", authenticateToken, getMe);
-authRouter.post("/refresh", refreshAccessToken);
-authRouter.post("/logout", logoutUser);
+authRouter.post("/register", ensureDB, registerUser);
+authRouter.post("/login", ensureDB, loginUser);
+authRouter.get("/me", ensureDB, authenticateToken, getMe);
+authRouter.post("/refresh", ensureDB, refreshAccessToken);
+authRouter.post("/logout", ensureDB, logoutUser);
 
 
 export default authRouter;

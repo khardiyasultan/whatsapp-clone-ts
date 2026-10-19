@@ -1,6 +1,8 @@
 
 import mongoose from "mongoose";
 
+let connectionPromise: Promise<typeof mongoose> | null = null;
+
 export async function connectDB(): Promise<void> {
   const mongoUri = process.env.MONGODB_URI;
 
@@ -8,7 +10,18 @@ export async function connectDB(): Promise<void> {
     throw new Error("MONGODB_URI is missing from the environment");
   }
 
-  await mongoose.connect(mongoUri);
+  // Reuse an existing connection.
+  if (mongoose.connection.readyState === 1) {
+    return;
+  }
 
-  console.log("MongoDB connected successfully");
+  // Reuse an ongoing connection attempt.
+  if (!connectionPromise) {
+    connectionPromise = mongoose.connect(mongoUri).catch((error: unknown) => {
+      connectionPromise = null;
+      throw error;
+    });
+  }
+
+  await connectionPromise;
 }

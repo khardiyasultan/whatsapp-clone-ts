@@ -1,3 +1,5 @@
+
+import { ensureDB } from "./middleware/ensure-db.middleware.js";
 import cookieParser from "cookie-parser";
 import express from "express";
 import cors from "cors";
@@ -15,11 +17,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(cookieParser());
-app.use("/api/users", userRouter);
-app.use("/api/contacts", contactRouter);
-app.use("/api/conversations", conversationRouter);
-app.use("/api/messages", messageRouter);
-
+app.use("/api/users", ensureDB, userRouter);
+app.use("/api/contacts", ensureDB, contactRouter);
+app.use("/api/conversations", ensureDB, conversationRouter);
+app.use("/api/messages", ensureDB, messageRouter);
 
 
 // Health check
