@@ -1,4 +1,4 @@
-
+import { getSocketServer } from "../config/socket.js";
 import type { Response } from "express";
 import mongoose from "mongoose";
 import type { AuthRequest } from "../middleware/auth.middleware.js";
@@ -8,19 +8,16 @@ import { createParticipantKey } from "../utils/conversation-key.js";
 
 export async function createConversation(
   req: AuthRequest,
-  res: Response
+  res: Response,
 ): Promise<void> {
   try {
     const currentUserId = req.userId;
     const { recipientId } = req.body as { recipientId?: unknown };
 
-    if (
-      !currentUserId ||
-      !mongoose.isValidObjectId(currentUserId)
-    ) {
+    if (!currentUserId || !mongoose.isValidObjectId(currentUserId)) {
       res.status(401).json({
         success: false,
-        message: "Authentication required"
+        message: "Authentication required",
       });
       return;
     }
@@ -31,7 +28,7 @@ export async function createConversation(
     ) {
       res.status(400).json({
         success: false,
-        message: "A valid recipientId is required"
+        message: "A valid recipientId is required",
       });
       return;
     }
@@ -42,7 +39,7 @@ export async function createConversation(
     if (currentObjectId.equals(recipientObjectId)) {
       res.status(400).json({
         success: false,
-        message: "You cannot start a conversation with yourself"
+        message: "You cannot start a conversation with yourself",
       });
       return;
     }
@@ -54,41 +51,49 @@ export async function createConversation(
     if (!recipient) {
       res.status(404).json({
         success: false,
-        message: "Recipient user was not found"
+        message: "Recipient user was not found",
       });
       return;
     }
 
-    const participantKey = createParticipantKey(
-      currentUserId,
-      recipientId
-    );
+    const participantKey = createParticipantKey(currentUserId, recipientId);
 
     const existingConversation = await ConversationModel.findOne({
-      participantKey
+      participantKey,
     }).lean();
 
     if (existingConversation) {
       res.status(200).json({
         success: true,
         message: "Conversation already exists",
-        conversation: existingConversation
+        conversation: existingConversation,
       });
       return;
     }
 
     try {
       const conversation = await ConversationModel.create({
-        participants: [currentObjectId, recipientObjectId].sort(
-          (a, b) => a.toHexString().localeCompare(b.toHexString())
+        participants: [currentObjectId, recipientObjectId].sort((a, b) =>
+          a.toHexString().localeCompare(b.toHexString()),
         ),
-        participantKey
+        participantKey,
+      });
+
+      // Notify both participants about the new conversation.
+      const io = getSocketServer();
+
+      io.to(`user:${currentUserId}`).emit("conversation:new", {
+        conversationId: conversation._id.toString(),
+      });
+
+      io.to(`user:${recipientId}`).emit("conversation:new", {
+        conversationId: conversation._id.toString(),
       });
 
       res.status(201).json({
         success: true,
         message: "Conversation created successfully",
-        conversation
+        conversation,
       });
     } catch (error) {
       // Another request may have created this conversation concurrently.
@@ -97,14 +102,14 @@ export async function createConversation(
         error.code === 11000
       ) {
         const conversation = await ConversationModel.findOne({
-          participantKey
+          participantKey,
         }).lean();
 
         if (conversation) {
           res.status(200).json({
             success: true,
             message: "Conversation already exists",
-            conversation
+            conversation,
           });
           return;
         }
@@ -117,16 +122,14 @@ export async function createConversation(
 
     res.status(500).json({
       success: false,
-      message: "Unable to create conversation"
+      message: "Unable to create conversation",
     });
   }
 }
 
-
-
 export async function getConversations(
   req: AuthRequest,
-  res: Response
+  res: Response,
 ): Promise<void> {
   try {
     const userId = req.userId;
@@ -134,17 +137,17 @@ export async function getConversations(
     if (!userId || !mongoose.isValidObjectId(userId)) {
       res.status(401).json({
         success: false,
-        message: "Authentication required"
+        message: "Authentication required",
       });
       return;
     }
 
     const conversations = await ConversationModel.find({
-      participants: new mongoose.Types.ObjectId(userId)
+      participants: new mongoose.Types.ObjectId(userId),
     })
       .populate({
         path: "participants",
-        select: "name profilePhoto about"
+        select: "name profilePhoto about",
       })
       .sort({ updatedAt: -1 })
       .lean();
@@ -152,14 +155,14 @@ export async function getConversations(
     res.status(200).json({
       success: true,
       count: conversations.length,
-      conversations
+      conversations,
     });
   } catch (error) {
     console.error("Get conversations failed:", error);
 
     res.status(500).json({
       success: false,
-      message: "Unable to retrieve conversations"
+      message: "Unable to retrieve conversations",
     });
   }
 }

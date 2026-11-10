@@ -1,4 +1,3 @@
-
 import { ensureDB } from "./middleware/ensure-db.middleware.js";
 import cookieParser from "cookie-parser";
 import express from "express";
@@ -10,11 +9,15 @@ import contactRouter from "./routes/contact.routes.js";
 import conversationRouter from "./routes/conversation.routes.js";
 import messageRouter from "./routes/message.routes.js";
 
-
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: ["http://localhost:5173", "http://localhost:5174"],
+    credentials: true,
+  }),
+);
 app.use(express.json());
 app.use(cookieParser());
 app.use("/api/users", ensureDB, userRouter);
@@ -22,12 +25,11 @@ app.use("/api/contacts", ensureDB, contactRouter);
 app.use("/api/conversations", ensureDB, conversationRouter);
 app.use("/api/messages", ensureDB, messageRouter);
 
-
 // Health check
 app.get("/health", (_req, res) => {
   res.status(200).json({
     success: true,
-    message: "WhatsApp Clone API is running"
+    message: "WhatsApp Clone API is running",
   });
 });
 
